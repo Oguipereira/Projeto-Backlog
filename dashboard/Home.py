@@ -12,7 +12,6 @@ from app.services.incident_service import IncidentService
 from app.services.impact_service import ImpactService
 from app.services.config_service import ConfigService
 from app.utils.calculations import format_duration, format_number
-from app.auth import require_login, sidebar_user
 from dashboard.components.theme import apply_theme, page_header
 
 st.set_page_config(
@@ -22,8 +21,6 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 apply_theme()
-require_login()
-sidebar_user()
 
 PRIORITY_COLORS = {"P1": "#DC2626", "P2": "#EA580C", "P3": "#CA8A04", "P4": "#16A34A"}
 STATUS_COLORS   = {"Aberto": "#DC2626", "Em Andamento": "#2563EB", "Resolvido": "#16A34A"}

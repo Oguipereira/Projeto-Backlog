@@ -8,13 +8,10 @@ from app.database import get_db_session
 from app.services.incident_service import IncidentService
 from app.services.impact_service import ImpactService
 from app.services.config_service import ConfigService
-from app.auth import require_login, sidebar_user
 from dashboard.components.theme import apply_theme, page_header
 
 st.set_page_config(page_title="Configurações | Incidentes", page_icon="⚙️", layout="wide")
 apply_theme()
-require_login()
-sidebar_user()
 
 page_header("Configurações do Sistema", "Parâmetros de produção, sistemas e tipos de incidente")
 

@@ -23,13 +23,10 @@ from dashboard.components.charts import (
     loss_over_time_chart,
     incidents_by_system_chart,
 )
-from app.auth import require_login, sidebar_user
 from dashboard.components.filters import render_period_filter
 
 st.set_page_config(page_title="Analíticos | Incidentes", page_icon="📈", layout="wide")
 apply_theme()
-require_login()
-sidebar_user()
 
 page_header("Análise Estratégica de Impacto", "Qual sistema está custando mais? Por que não batemos a meta?")
 
