@@ -1,0 +1,40 @@
+{
+  "production": {
+    "work_hours_per_day": 9.0,
+    "effective_hours_per_day": 8.0,
+    "daily_production_target": 40000000.0,
+    "currency": "R$"
+  },
+  "priorities": {
+    "P1": {
+      "label": "Crítico",
+      "color": "#DC2626",
+      "sla_minutes": 60
+    },
+    "P2": {
+      "label": "Alto",
+      "color": "#EA580C",
+      "sla_minutes": 240
+    },
+    "P3": {
+      "label": "Médio",
+      "color": "#CA8A04",
+      "sla_minutes": 480
+    },
+    "P4": {
+      "label": "Baixo",
+      "color": "#16A34A",
+      "sla_minutes": 1440
+    }
+  },
+  "statuses": [
+    "Aberto",
+    "Em Andamento",
+    "Resolvido"
+  ],
+  "criticality_levels": [
+    "alta",
+    "media",
+    "baixa"
+  ]
+}
