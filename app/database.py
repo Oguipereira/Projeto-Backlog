@@ -6,7 +6,20 @@ from sqlalchemy.orm import sessionmaker, declarative_base
 BASE_DIR = Path(__file__).resolve().parent.parent
 DATA_DIR = BASE_DIR / "data"
 
-_sqlite_url = f"sqlite:///{DATA_DIR / 'incidents.db'}"
+def _sqlite_data_dir() -> Path:
+    """Use /tmp on read-only filesystems (e.g. Streamlit Cloud)."""
+    try:
+        DATA_DIR.mkdir(parents=True, exist_ok=True)
+        test = DATA_DIR / ".write_test"
+        test.touch()
+        test.unlink()
+        return DATA_DIR
+    except Exception:
+        tmp = Path("/tmp/incident_data")
+        tmp.mkdir(parents=True, exist_ok=True)
+        return tmp
+
+_sqlite_url = f"sqlite:///{_sqlite_data_dir() / 'incidents.db'}"
 
 def _get_database_url() -> str:
     try:
@@ -24,8 +37,6 @@ if DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
 _is_sqlite = DATABASE_URL.startswith("sqlite")
-if _is_sqlite:
-    DATA_DIR.mkdir(exist_ok=True)
 
 connect_args = {"check_same_thread": False} if _is_sqlite else {}
 engine = create_engine(DATABASE_URL, connect_args=connect_args)
