@@ -13,11 +13,23 @@ from datetime import datetime
 from app.database import get_db_session
 from app.services.incident_service import IncidentService
 from app.services.config_service import ConfigService
+from app.services.activity_service import ActivityService
 from app.utils.calculations import format_duration
+from app.auth import require_login, sidebar_user
 from dashboard.components.theme import apply_theme, page_header
 
 st.set_page_config(page_title="Incidentes | Gestão", page_icon="🚨", layout="wide")
 apply_theme()
+_user_email, _user_name = require_login()
+sidebar_user()
+
+
+def _log(action: str, details: str = ""):
+    _db = get_db_session()
+    try:
+        ActivityService(_db).log(_user_email, _user_name, action, details)
+    finally:
+        _db.close()
 
 page_header("Gestão de Incidentes", "Registre, acompanhe e encerre incidentes operacionais")
 
@@ -81,7 +93,7 @@ if submitted:
         started_dt = datetime.combine(started_at, started_time)
         ended_dt = datetime.combine(ended_at_date, ended_time) if has_end else None
 
-        svc.create({
+        inc = svc.create({
             "title": title.strip(),
             "description": description.strip(),
             "system_id": systems_map[system_name],
@@ -93,6 +105,7 @@ if submitted:
             "affected_users": int(affected_users),
         })
         db.close()
+        _log("Incidente criado", f"{inc.incident_id} — {title.strip()} [{priority}]")
         st.sidebar.success("Incidente registrado!")
         st.cache_data.clear()
         st.rerun()
@@ -270,6 +283,7 @@ for inc in incidents:
                 "ended_at": new_ended_at,
             })
             db2.close()
+            _log("Incidente atualizado", f"{k} — status: {new_status}, prioridade: {new_priority}")
             st.session_state[f"editing_{k}"] = False
             st.cache_data.clear()
             st.rerun()
@@ -284,6 +298,7 @@ for inc in incidents:
             db3 = get_db()
             IncidentService(db3).delete(k)
             db3.close()
+            _log("Incidente excluído", k)
             st.session_state[f"editing_{k}"] = False
             st.cache_data.clear()
             st.rerun()

@@ -16,6 +16,7 @@ from app.services.impact_service import ImpactService
 from app.services.config_service import ConfigService
 from app.utils.calculations import format_duration, format_number
 from app.utils.pdf_generator import generate_report_pdf
+from app.auth import require_login, sidebar_user
 from dashboard.components.theme import apply_theme, page_header
 from dashboard.components.charts import loss_over_time_chart
 from dashboard.components.filters import render_period_filter
@@ -26,6 +27,8 @@ st.set_page_config(
     layout="wide",
 )
 apply_theme()
+require_login()
+sidebar_user()
 
 st.markdown("""
 <style>

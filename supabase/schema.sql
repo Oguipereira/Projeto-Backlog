@@ -61,3 +61,16 @@ CREATE TABLE IF NOT EXISTS incidents (
 );
 
 CREATE INDEX IF NOT EXISTS ix_incidents_incident_id ON incidents (incident_id);
+
+-- ─── activity_log ─────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS activity_log (
+    id         SERIAL PRIMARY KEY,
+    user_email VARCHAR(200) NOT NULL,
+    user_name  VARCHAR(200) NOT NULL DEFAULT '',
+    action     VARCHAR(100) NOT NULL,
+    details    TEXT         NOT NULL DEFAULT '',
+    created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS ix_activity_log_user_email ON activity_log (user_email);
+CREATE INDEX IF NOT EXISTS ix_activity_log_created_at ON activity_log (created_at);

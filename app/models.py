@@ -6,6 +6,17 @@ from sqlalchemy.orm import relationship
 from app.database import Base
 
 
+class ActivityLog(Base):
+    __tablename__ = "activity_log"
+
+    id         = Column(Integer, primary_key=True, index=True)
+    user_email = Column(String(200), nullable=False)
+    user_name  = Column(String(200), default="")
+    action     = Column(String(100), nullable=False)
+    details    = Column(Text, default="")
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
 class Configuration(Base):
     __tablename__ = "configurations"
 

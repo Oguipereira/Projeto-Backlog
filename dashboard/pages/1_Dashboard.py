@@ -25,10 +25,13 @@ from dashboard.components.charts import (
     incidents_by_type_chart,
     loss_over_time_chart,
 )
+from app.auth import require_login, sidebar_user
 from dashboard.components.filters import render_period_filter, render_sidebar_filters
 
 st.set_page_config(page_title="Dashboard | Incidentes", page_icon="📊", layout="wide")
 apply_theme()
+require_login()
+sidebar_user()
 
 page_header("Dashboard Executivo", "Análise de impacto produtivo por período")
 
