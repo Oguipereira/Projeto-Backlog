@@ -6,10 +6,6 @@ from sqlalchemy.orm import sessionmaker, declarative_base
 BASE_DIR = Path(__file__).resolve().parent.parent
 DATA_DIR = BASE_DIR / "data"
 
-# Ordem de prioridade para DATABASE_URL:
-# 1. Streamlit secrets (produção no Streamlit Cloud)
-# 2. Variável de ambiente (Railway, Docker, etc.)
-# 3. SQLite local (desenvolvimento)
 _sqlite_url = f"sqlite:///{DATA_DIR / 'incidents.db'}"
 
 def _get_database_url() -> str:
@@ -24,7 +20,6 @@ def _get_database_url() -> str:
 
 DATABASE_URL = _get_database_url()
 
-# Supabase retorna URLs com "postgres://", SQLAlchemy exige "postgresql://"
 if DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
@@ -45,3 +40,8 @@ def get_db_session():
 def init_db():
     from app.models import Base as _Base
     _Base.metadata.create_all(bind=engine)
+
+
+# Cria tabelas automaticamente ao importar — garante que todas as páginas
+# encontrem o schema pronto independente da ordem de carregamento.
+init_db()

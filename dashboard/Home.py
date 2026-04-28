@@ -7,9 +7,7 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime, timedelta
 
-from app.database import get_db_session, init_db
-
-init_db()
+from app.database import get_db_session
 from app.services.incident_service import IncidentService
 from app.services.impact_service import ImpactService
 from app.services.config_service import ConfigService
