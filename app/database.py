@@ -40,3 +40,8 @@ Base = declarative_base()
 
 def get_db_session():
     return SessionLocal()
+
+
+def init_db():
+    from app.models import Base as _Base
+    _Base.metadata.create_all(bind=engine)
