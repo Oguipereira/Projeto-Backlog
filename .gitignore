@@ -7,9 +7,10 @@ venv/
 .venv/
 env/
 
-# Banco local (não versionar dados)
+# Banco local e modelos ML (não versionar dados)
 data/*.db
 data/*.pdf
+data/models/
 
 # Secrets — NUNCA versionar
 .streamlit/secrets.toml

@@ -48,51 +48,82 @@ def get_reference_data():
 
 
 systems_map, types_map, cfg = get_reference_data()
+systems_list = list(systems_map.keys())
+types_list = list(types_map.keys())
 
 # ------------------------------------------------------------------ #
-#  Sidebar: Create new incident                                        #
+#  Sidebar: Create new incident (session_state — permite botão de IA) #
 # ------------------------------------------------------------------ #
 
 st.sidebar.header("➕ Novo Incidente")
-with st.sidebar.form("create_incident_form", clear_on_submit=True):
-    title = st.text_input("Título *", placeholder="Ex: ERP fora do ar — produção parada")
-    description = st.text_area("Descrição", height=80)
-    system_name = st.selectbox("Sistema *", list(systems_map.keys()))
-    type_name = st.selectbox("Tipo *", list(types_map.keys()))
-    priority = st.selectbox("Prioridade *", ["P1", "P2", "P3", "P4"])
-    status = st.selectbox("Status *", ["Aberto", "Em Andamento", "Resolvido"])
-    started_at = st.date_input("Data/Hora de Início *", value=datetime.today())
-    started_time = st.time_input("Hora de Início", value=datetime.now().time())
 
-    col_end1, col_end2 = st.columns(2)
-    has_end = col_end1.checkbox("Já encerrado?")
-    ended_at_date = col_end2.date_input("Data Fim", value=datetime.today(), disabled=not has_end)
-    ended_time = st.time_input("Hora Fim", value=datetime.now().time(), disabled=not has_end)
+# Inicializa defaults na primeira renderização (ou após limpar o form)
+_now = datetime.now()
+for _k, _v in {
+    "ni_system":       systems_list[0] if systems_list else "",
+    "ni_type":         types_list[0]   if types_list   else "",
+    "ni_priority":     "P1",
+    "ni_status":       "Aberto",
+    "ni_started_time": _now.time(),
+    "ni_ended_time":   _now.time(),
+    "ni_has_end":      False,
+    "ni_affected":     0,
+}.items():
+    if _k not in st.session_state:
+        st.session_state[_k] = _v
 
-    affected_users = st.number_input("Usuários afetados", min_value=0, value=0)
-    submitted = st.form_submit_button("Registrar Incidente", use_container_width=True)
+title       = st.sidebar.text_input("Título *", placeholder="Ex: ERP fora do ar — produção parada", key="ni_title")
+description = st.sidebar.text_area("Descrição", height=80, key="ni_desc")
 
-if submitted:
+
+# ── Restante dos campos ───────────────────────────────────────────── #
+system_name = st.sidebar.selectbox("Sistema *",    systems_list,                          key="ni_system")
+type_name   = st.sidebar.selectbox("Tipo *",       types_list,                            key="ni_type")
+priority    = st.sidebar.selectbox("Prioridade *", ["P1", "P2", "P3", "P4"],              key="ni_priority")
+status      = st.sidebar.selectbox("Status *",     ["Aberto", "Em Andamento", "Resolvido"], key="ni_status")
+
+started_at_date = st.sidebar.date_input("Data de Início *", key="ni_started_date")
+started_time    = st.sidebar.time_input("Hora de Início",    key="ni_started_time")
+
+col_end1, col_end2 = st.sidebar.columns(2)
+has_end       = col_end1.checkbox("Já encerrado?", key="ni_has_end")
+ended_at_date = col_end2.date_input("Data Fim", disabled=not has_end, key="ni_ended_date")
+ended_time    = st.sidebar.time_input("Hora Fim", disabled=not has_end, key="ni_ended_time")
+
+affected_users = st.sidebar.number_input("Usuários afetados", min_value=0, key="ni_affected")
+
+if st.sidebar.button("Registrar Incidente", use_container_width=True, type="primary"):
     if not title.strip():
         st.sidebar.error("Título é obrigatório.")
     else:
         db = get_db()
         svc = IncidentService(db)
-        started_dt = datetime.combine(started_at, started_time)
-        ended_dt = datetime.combine(ended_at_date, ended_time) if has_end else None
+        started_dt = datetime.combine(started_at_date, started_time)
+        ended_dt   = datetime.combine(ended_at_date, ended_time) if has_end else None
 
-        inc = svc.create({
-            "title": title.strip(),
-            "description": description.strip(),
-            "system_id": systems_map[system_name],
+        svc.create({
+            "title":            title.strip(),
+            "description":      (description or "").strip(),
+            "system_id":        systems_map[system_name],
             "incident_type_id": types_map[type_name],
-            "priority": priority,
-            "status": status,
-            "started_at": started_dt,
-            "ended_at": ended_dt,
-            "affected_users": int(affected_users),
+            "priority":         priority,
+            "status":           status,
+            "started_at":       started_dt,
+            "ended_at":         ended_dt,
+            "affected_users":   int(affected_users),
         })
+        # Retreina os modelos com o novo dado incluído
+        try:
+            from app.services.ml_service import train_all
+            train_all(svc.get_all({}))
+        except Exception:
+            pass
         db.close()
+
+        for _k in [k for k in list(st.session_state.keys())
+                   if k.startswith("ni_") or k.startswith("_ni_")]:
+            del st.session_state[_k]
+
         st.sidebar.success("Incidente registrado!")
         st.cache_data.clear()
         st.rerun()
@@ -212,12 +243,11 @@ for inc in incidents:
 
         with action_col:
             if st.button("Editar", key=f"edit_{inc.incident_id}"):
-                # Limpa estado anterior para carregar valores frescos do banco
                 for s in ["es", "ep", "et", "erc", "ern", "ehe", "eed", "eet"]:
                     st.session_state.pop(f"{s}_{inc.incident_id}", None)
                 st.session_state[f"editing_{inc.incident_id}"] = True
 
-    # Painel de edição inline (sem st.form para permitir interatividade total)
+    # Painel de edição inline
     if st.session_state.get(f"editing_{inc.incident_id}"):
         k = inc.incident_id
         st.markdown(f"**Editando {k}**")
@@ -233,7 +263,8 @@ for inc in incidents:
             index=["P1", "P2", "P3", "P4"].index(inc.priority),
             key=f"ep_{k}",
         )
-        new_title      = st.text_input("Título", value=inc.title, key=f"et_{k}")
+        new_title = st.text_input("Título", value=inc.title, key=f"et_{k}")
+
         new_root_cause = st.text_area("Causa Raiz", value=inc.root_cause or "", key=f"erc_{k}")
         new_resolution = st.text_area("Notas de Resolução", value=inc.resolution_notes or "", key=f"ern_{k}")
 
@@ -262,12 +293,12 @@ for inc in incidents:
         if save_col.button("Salvar", key=f"esave_{k}", use_container_width=True):
             db2 = get_db()
             IncidentService(db2).update(k, {
-                "title": new_title,
-                "status": new_status,
-                "priority": new_priority,
-                "root_cause": new_root_cause,
+                "title":            new_title,
+                "status":           new_status,
+                "priority":         new_priority,
+                "root_cause":       new_root_cause,
                 "resolution_notes": new_resolution,
-                "ended_at": new_ended_at,
+                "ended_at":         new_ended_at,
             })
             db2.close()
             st.session_state[f"editing_{k}"] = False

@@ -23,9 +23,6 @@ class ConfigService:
         with open(CONFIG_PATH, "w", encoding="utf-8") as f:
             json.dump(self._file, f, indent=2, ensure_ascii=False)
 
-    # ------------------------------------------------------------------ #
-    #  Production config                                                   #
-    # ------------------------------------------------------------------ #
 
     def get_production_config(self) -> dict:
         base = self._file["production"].copy()

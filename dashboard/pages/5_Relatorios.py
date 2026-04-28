@@ -189,6 +189,28 @@ for col, lbl, val in [
 st.markdown("")
 
 # ── Gráfico + tabelas ─────────────────────────────────────────────── #
+
+# Pré-computa para exibição e para a análise IA
+sys5_raw = (
+    df.groupby("system")["production_loss"].sum()
+    .nlargest(5).reset_index()
+    .rename(columns={"system": "Sistema", "production_loss": "Perda de Produção"})
+)
+sys5 = sys5_raw.copy()
+sys5["Perda de Produção"] = sys5["Perda de Produção"].apply(
+    lambda x: f"{x:,.0f}".replace(",", ".")
+)
+
+inc5_raw = df.nlargest(5, "production_loss")[
+    ["incident_id", "title", "system", "priority", "production_loss"]
+].copy()
+inc5 = inc5_raw.copy()
+inc5["title"]           = inc5["title"].str[:35] + "…"
+inc5["production_loss"] = inc5["production_loss"].apply(
+    lambda x: f"{x:,.0f}".replace(",", ".")
+)
+inc5.columns = ["ID", "Título", "Sistema", "P.", "Perda de Produção"]
+
 left, right = st.columns([3, 2])
 
 with left:
@@ -199,26 +221,10 @@ with left:
 with right:
     st.markdown('<div class="section-title">Top 5 Sistemas por Impacto</div>',
                 unsafe_allow_html=True)
-    sys5 = (
-        df.groupby("system")["production_loss"].sum()
-        .nlargest(5).reset_index()
-        .rename(columns={"system": "Sistema", "production_loss": "Perda de Produção"})
-    )
-    sys5["Perda de Produção"] = sys5["Perda de Produção"].apply(
-        lambda x: f"{x:,.0f}".replace(",", ".")
-    )
     st.dataframe(sys5, use_container_width=True, hide_index=True)
 
     st.markdown('<div class="section-title">Top 5 Incidentes Mais Caros</div>',
                 unsafe_allow_html=True)
-    inc5 = df.nlargest(5, "production_loss")[
-        ["incident_id", "title", "system", "priority", "production_loss"]
-    ].copy()
-    inc5["title"]           = inc5["title"].str[:35] + "…"
-    inc5["production_loss"] = inc5["production_loss"].apply(
-        lambda x: f"{x:,.0f}".replace(",", ".")
-    )
-    inc5.columns = ["ID", "Título", "Sistema", "P.", "Perda de Produção"]
     st.dataframe(inc5, use_container_width=True, hide_index=True)
 
 # ── Prioridades ────────────────────────────────────────────────────── #
@@ -240,6 +246,74 @@ for col, (p, lbl, cnt) in zip(
             <div style="font-size:26px;font-weight:800;color:{c}">{cnt}</div>
             <div style="font-size:12px;font-weight:700;color:#374151">{p} — {lbl}</div>
             <div style="font-size:12px;color:#6B7280">{pct}% da perda total</div>
+        </div>""",
+        unsafe_allow_html=True,
+    )
+
+# ── Tendências e Diagnóstico ───────────────────────────────────────── #
+st.markdown("")
+st.markdown('<div class="section-title">Tendências e Diagnóstico</div>',
+            unsafe_allow_html=True)
+
+_t1, _t2, _t3, _t4 = st.columns(4)
+
+# Sistema mais crítico
+_top_sys = df.groupby("system")["production_loss"].sum().idxmax() if not df.empty else "-"
+_top_sys_pct = round(
+    df[df["system"] == _top_sys]["production_loss"].sum()
+    / max(df["production_loss"].sum(), 1) * 100, 1
+)
+
+# Hora de pico
+if "started_at" in df.columns and not df.empty:
+    _peak_hour = df["started_at"].dt.hour.value_counts().idxmax()
+    _peak_label = f"{_peak_hour:02d}h–{(_peak_hour+1)%24:02d}h"
+else:
+    _peak_label = "-"
+
+# MTTR médio das últimas semanas (tendência)
+if not df.empty and "duration_minutes" in df.columns:
+    _df_sorted = df.dropna(subset=["duration_minutes"]).sort_values("started_at")
+    _half = max(len(_df_sorted) // 2, 1)
+    _mttr_first = _df_sorted.iloc[:_half]["duration_minutes"].mean()
+    _mttr_last  = _df_sorted.iloc[_half:]["duration_minutes"].mean() if len(_df_sorted) > _half else _mttr_first
+    _mttr_delta = _mttr_last - _mttr_first
+    _mttr_trend = f"{'↓' if _mttr_delta < 0 else '↑'} {abs(_mttr_delta):.0f} min"
+    _mttr_color = "#16A34A" if _mttr_delta < 0 else "#DC2626"
+else:
+    _mttr_trend = "-"
+    _mttr_color = "#6B7280"
+
+# Taxa de resolução no período
+_resolved  = len(df[df["status"] == "Resolvido"]) if "status" in df.columns else 0
+_resol_pct = round(_resolved / max(len(df), 1) * 100, 1)
+
+for _col, _val, _lbl, _color in [
+    (_t1, _top_sys,                "Sistema mais impactante",  "#DC2626"),
+    (_t2, f"{_top_sys_pct}%",      "% da perda total",         "#EA580C"),
+    (_t3, _mttr_trend,             "Tendência de MTTR",        _mttr_color),
+    (_t4, f"{_resol_pct}%",        "Taxa de resolução",        "#16A34A"),
+]:
+    _col.markdown(
+        f"""<div style="background:#F8FAFC;border:1px solid #E2E8F0;
+            border-radius:12px;padding:14px 18px;text-align:center">
+            <div style="font-size:22px;font-weight:800;color:{_color}">{_val}</div>
+            <div style="font-size:12px;color:#64748B;margin-top:4px">{_lbl}</div>
+        </div>""",
+        unsafe_allow_html=True,
+    )
+
+# Distribuição por hora do dia
+if not df.empty and "started_at" in df.columns:
+    st.markdown("")
+    _hour_counts = df["started_at"].dt.hour.value_counts().sort_index()
+    _peak_hours  = _hour_counts.nlargest(3).index.tolist()
+    st.markdown(
+        f"""<div style="background:#FFFBEB;border-left:4px solid #CA8A04;
+            border-radius:0 10px 10px 0;padding:12px 18px;font-size:13px;color:#374151">
+            ⏰ <b>Horários de maior ocorrência:</b>
+            {', '.join(f'{h:02d}h' for h in sorted(_peak_hours))} —
+            concentre esforços de monitoramento nesses períodos.
         </div>""",
         unsafe_allow_html=True,
     )
