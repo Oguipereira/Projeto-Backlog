@@ -154,7 +154,7 @@ def heatmap_dow_hour(df: pd.DataFrame) -> go.Figure:
 
     order = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
     labels_pt = {"Monday": "Seg", "Tuesday": "Ter", "Wednesday": "Qua",
-                 "Thursday": "Qui", "Friday": "Sex", "Saturday": "Sáb", "Sunday": "Dom"}
+                 "Thursday": "Qui", "Friday": "Sexta", "Saturday": "Sáb", "Sunday": "Dom"}
 
     pivot = (
         df.groupby(["dow", "hour"])
