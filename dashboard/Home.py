@@ -134,8 +134,8 @@ if data["open_rows"]:
 
     styled = (
         df_open.style
-        .applymap(_color_p, subset=["Prior."])
-        .applymap(_color_s, subset=["Status"])
+        .map(_color_p, subset=["Prior."])
+        .map(_color_s, subset=["Status"])
     )
     st.dataframe(styled, use_container_width=True, hide_index=True)
 else:
