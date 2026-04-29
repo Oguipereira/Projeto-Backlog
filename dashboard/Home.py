@@ -34,7 +34,7 @@ def load_home():
         impact = ImpactService(db)
         cfg_sv = ConfigService(db)
 
-        today       = datetime.utcnow().replace(hour=0, minute=0, second=0)
+        today       = datetime.now().replace(hour=0, minute=0, second=0)
         month_start = today.replace(day=1)
 
         all_inc    = svc.get_all()
@@ -47,7 +47,7 @@ def load_home():
 
         open_rows = []
         for i in open_inc:
-            dur = (datetime.utcnow() - i.started_at).total_seconds() / 60
+            dur = (datetime.now() - i.started_at).total_seconds() / 60
             rate = cfg_sv.get_production_rates()["per_minute"]
             open_rows.append({
                 "ID":        i.incident_id,

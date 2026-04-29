@@ -81,11 +81,19 @@ with st.expander("➕ Adicionar novo sistema"):
         if st.form_submit_button("Adicionar", use_container_width=True):
             if s_name.strip():
                 db4 = get_db()
-                IncidentService(db4).create_system(s_name.strip(), s_desc.strip(), s_crit)
-                db4.close()
-                st.success(f"Sistema '{s_name}' adicionado!")
-                st.cache_data.clear()
-                st.rerun()
+                try:
+                    IncidentService(db4).create_system(s_name.strip(), s_desc.strip(), s_crit)
+                    db4.close()
+                    st.success(f"Sistema '{s_name}' adicionado!")
+                    st.cache_data.clear()
+                    st.rerun()
+                except Exception as e:
+                    db4.close()
+                    msg = str(e)
+                    if "UNIQUE" in msg.upper() or "unique" in msg:
+                        st.error(f"Já existe um sistema com o nome '{s_name}'.")
+                    else:
+                        st.error(f"Erro ao adicionar sistema: {msg}")
             else:
                 st.error("Nome é obrigatório.")
 
@@ -188,10 +196,19 @@ with st.expander("➕ Adicionar tipo"):
         if st.form_submit_button("Adicionar", use_container_width=True):
             if t_name.strip():
                 db8 = get_db()
-                IncidentService(db8).create_incident_type(t_name.strip(), t_desc.strip())
-                db8.close()
-                st.success(f"Tipo '{t_name}' adicionado!")
-                st.rerun()
+                try:
+                    IncidentService(db8).create_incident_type(t_name.strip(), t_desc.strip())
+                    db8.close()
+                    st.success(f"Tipo '{t_name}' adicionado!")
+                    st.cache_data.clear()
+                    st.rerun()
+                except Exception as e:
+                    db8.close()
+                    msg = str(e)
+                    if "UNIQUE" in msg.upper() or "unique" in msg:
+                        st.error(f"Já existe um tipo com o nome '{t_name}'.")
+                    else:
+                        st.error(f"Erro ao adicionar tipo: {msg}")
             else:
                 st.error("Nome é obrigatório.")
 

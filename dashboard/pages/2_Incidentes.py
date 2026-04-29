@@ -85,10 +85,13 @@ status      = st.sidebar.selectbox("Status *",     ["Aberto", "Em Andamento", "R
 started_at_date = st.sidebar.date_input("Data de Início *", key="ni_started_date")
 started_time    = st.sidebar.time_input("Hora de Início",    key="ni_started_time")
 
-col_end1, col_end2 = st.sidebar.columns(2)
-has_end       = col_end1.checkbox("Já encerrado?", key="ni_has_end")
-ended_at_date = col_end2.date_input("Data Fim", disabled=not has_end, key="ni_ended_date")
-ended_time    = st.sidebar.time_input("Hora Fim", disabled=not has_end, key="ni_ended_time")
+has_end = st.sidebar.checkbox("Já encerrado?", key="ni_has_end")
+if has_end:
+    ended_at_date = st.sidebar.date_input("Data Fim", key="ni_ended_date")
+    ended_time    = st.sidebar.time_input("Hora Fim",  key="ni_ended_time")
+else:
+    ended_at_date = None
+    ended_time    = None
 
 affected_users = st.sidebar.number_input("Usuários afetados", min_value=0, key="ni_affected")
 
@@ -211,7 +214,7 @@ for inc in incidents:
     type_name_disp = inc.incident_type.name if inc.incident_type else "-"
     dur = inc.duration_minutes or 0
     if not inc.ended_at:
-        dur = (datetime.utcnow() - inc.started_at).total_seconds() / 60
+        dur = (datetime.now() - inc.started_at).total_seconds() / 60
 
     with st.container():
         header_col, action_col = st.columns([5, 1])
