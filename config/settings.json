@@ -36,5 +36,8 @@
     "alta",
     "media",
     "baixa"
-  ]
+  ],
+  "integrations": {
+    "teams_webhook_url": ""
+  }
 }

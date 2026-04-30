@@ -16,6 +16,8 @@ from app.services.similarity_service import find_similar
 from app.services.anomaly_service import detect_anomalies, system_trend
 from app.services.sla_predictor import train, predict_risk, is_trained
 from app.services.ml_service import train_all, models_status
+from app.services.report_service import build_report
+from app.services.teams_service import send_to_teams
 from app.utils.calculations import format_duration, calculate_production_loss, format_number
 from dashboard.components.theme import apply_theme, page_header
 
@@ -79,6 +81,47 @@ with st.sidebar:
             st.warning(f"Dados insuficientes para SLA ({r_sla.get('samples',0)} < {r_sla.get('needed',20)})")
         st.cache_data.clear()
         st.rerun()
+
+    st.divider()
+    st.markdown("### Enviar para o Teams")
+
+    db_cfg = get_db_session()
+    try:
+        _cfg_svc = ConfigService(db_cfg)
+        _saved_url = _cfg_svc.get_teams_webhook_url()
+    finally:
+        db_cfg.close()
+
+    webhook_input = st.text_input(
+        "URL do Incoming Webhook",
+        value=_saved_url,
+        type="password",
+        placeholder="https://outlook.office.com/webhook/...",
+        help="Canal Teams → ••• → Conectores → Incoming Webhook → Configurar",
+    )
+
+    col_save, col_send = st.columns(2)
+
+    if col_save.button("Salvar URL", use_container_width=True):
+        db_save = get_db_session()
+        try:
+            ConfigService(db_save).save_teams_webhook_url(webhook_input.strip())
+        finally:
+            db_save.close()
+        st.success("URL salva.")
+
+    if col_send.button("Enviar agora", use_container_width=True, type="primary"):
+        url = webhook_input.strip() or _saved_url
+        if not url:
+            st.warning("Configure a URL do webhook primeiro.")
+        else:
+            with st.spinner("Enviando..."):
+                report = build_report(all_incs, open_incs, prod_rates)
+                result = send_to_teams(url, report)
+            if result["status"] == "ok":
+                st.success("Relatório enviado para o Teams!")
+            else:
+                st.error(f"Falha: {result['message']}")
 
 
 st.markdown("---")

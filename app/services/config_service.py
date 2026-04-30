@@ -79,3 +79,14 @@ class ConfigService:
 
     def get_priority_sla(self, priority: str) -> int:
         return self._file["priorities"].get(priority, {}).get("sla_minutes", 9999)
+
+    # ------------------------------------------------------------------ #
+    #  Integrations                                                        #
+    # ------------------------------------------------------------------ #
+
+    def get_teams_webhook_url(self) -> str:
+        return self._file.get("integrations", {}).get("teams_webhook_url", "")
+
+    def save_teams_webhook_url(self, url: str):
+        self._file.setdefault("integrations", {})["teams_webhook_url"] = url
+        self._save_file()
