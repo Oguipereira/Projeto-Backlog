@@ -86,12 +86,15 @@ with st.sidebar:
     st.divider()
     st.markdown("### Enviar para o Teams")
 
-    db_cfg = get_db_session()
+    _saved_url = ""
     try:
-        _cfg_svc = ConfigService(db_cfg)
-        _saved_url = _cfg_svc.get_teams_webhook_url()
-    finally:
-        db_cfg.close()
+        db_cfg = get_db_session()
+        try:
+            _saved_url = ConfigService(db_cfg).get_teams_webhook_url()
+        finally:
+            db_cfg.close()
+    except Exception:
+        pass
 
     webhook_input = st.text_input(
         "URL do Incoming Webhook",
@@ -120,19 +123,22 @@ with st.sidebar:
                 report = build_report(all_incs, open_incs, prod_rates)
                 result = send_to_teams(url, report)
             if result["status"] == "ok":
-                st.success("Relatório enviado para o Teams!")
+                st.success("Relatorio enviado para o Teams!")
             else:
                 st.error(f"Falha: {result['message']}")
-
 
     st.divider()
     st.markdown("### Enviar por E-mail")
 
-    db_email = get_db_session()
+    _email_cfg = {}
     try:
-        _email_cfg = ConfigService(db_email).get_email_config()
-    finally:
-        db_email.close()
+        db_email = get_db_session()
+        try:
+            _email_cfg = ConfigService(db_email).get_email_config()
+        finally:
+            db_email.close()
+    except Exception:
+        pass
 
     _configured = bool(_email_cfg.get("username") and _email_cfg.get("password"))
 
