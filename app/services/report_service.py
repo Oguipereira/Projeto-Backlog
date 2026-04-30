@@ -69,11 +69,14 @@ def build_report(
         sla_critical.sort(key=lambda x: x["risk_pct"], reverse=True)
 
     return {
-        "generated_at":   now.strftime("%d/%m/%Y %H:%M"),
-        "open_count":     len(open_incs),
-        "total_loss":     total_loss,
-        "total_loss_fmt": f"R$ {format_number(total_loss)}",
-        "top_losses":     loss_rows[:top_n],
-        "anomalies":      anomalies[:4],
-        "sla_critical":   sla_critical[:5],
+        "generated_at":    now.strftime("%d/%m/%Y %H:%M"),
+        "open_count":      len(open_incs),
+        "total_loss":      total_loss,
+        "total_loss_fmt":  f"R$ {format_number(total_loss)}",
+        "top_losses":      loss_rows[:top_n],
+        "anomalies":       anomalies[:4],
+        "sla_critical":    sla_critical[:5],
+        "rate_per_minute": rate,
+        "rate_per_hour":   prod_rates["per_hour"],
+        "rate_per_day":    prod_rates["per_day"],
     }

@@ -18,6 +18,7 @@ from app.services.sla_predictor import train, predict_risk, is_trained
 from app.services.ml_service import train_all, models_status
 from app.services.report_service import build_report
 from app.services.teams_service import send_to_teams
+from app.services.email_service import send_email
 from app.utils.calculations import format_duration, calculate_production_loss, format_number
 from dashboard.components.theme import apply_theme, page_header
 
@@ -122,6 +123,59 @@ with st.sidebar:
                 st.success("Relatório enviado para o Teams!")
             else:
                 st.error(f"Falha: {result['message']}")
+
+
+    st.divider()
+    st.markdown("### Enviar por E-mail")
+
+    db_email = get_db_session()
+    try:
+        _email_cfg = ConfigService(db_email).get_email_config()
+    finally:
+        db_email.close()
+
+    with st.expander("Configurar SMTP", expanded=not _email_cfg.get("username")):
+        e_host = st.text_input("Servidor SMTP", value=_email_cfg.get("smtp_host", "smtp.gmail.com"))
+        e_port = st.number_input("Porta", value=int(_email_cfg.get("smtp_port", 587)), step=1)
+        e_user = st.text_input("Usuário", value=_email_cfg.get("username", ""))
+        e_pass = st.text_input("Senha / App Password", type="password",
+                               value=_email_cfg.get("password", ""))
+        e_from = st.text_input("De (remetente)", value=_email_cfg.get("from_addr", ""))
+        e_to   = st.text_area("Para (um e-mail por linha)",
+                              value="\n".join(_email_cfg.get("to_addrs", [])), height=80)
+        if st.button("Salvar configuracoes SMTP", use_container_width=True):
+            db_sv = get_db_session()
+            try:
+                ConfigService(db_sv).save_email_config({
+                    "smtp_host": e_host,
+                    "smtp_port": int(e_port),
+                    "username":  e_user,
+                    "password":  e_pass,
+                    "from_addr": e_from,
+                    "to_addrs":  [a.strip() for a in e_to.splitlines() if a.strip()],
+                })
+            finally:
+                db_sv.close()
+            st.success("Configuracoes salvas.")
+
+    if st.button("Enviar relatorio por e-mail", use_container_width=True, type="primary"):
+        cfg = _email_cfg
+        to  = [a.strip() for a in e_to.splitlines() if a.strip()] or cfg.get("to_addrs", [])
+        with st.spinner("Enviando e-mail..."):
+            report = build_report(all_incs, open_incs, prod_rates)
+            result = send_email(
+                smtp_host = e_host or cfg.get("smtp_host", ""),
+                smtp_port = int(e_port or cfg.get("smtp_port", 587)),
+                username  = e_user or cfg.get("username", ""),
+                password  = e_pass or cfg.get("password", ""),
+                from_addr = e_from or cfg.get("from_addr", ""),
+                to_addrs  = to,
+                report    = report,
+            )
+        if result["status"] == "ok":
+            st.success(f"Relatorio enviado para {', '.join(to)}!")
+        else:
+            st.error(f"Falha: {result['message']}")
 
 
 st.markdown("---")

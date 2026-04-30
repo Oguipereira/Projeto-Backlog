@@ -90,3 +90,11 @@ class ConfigService:
     def save_teams_webhook_url(self, url: str):
         self._file.setdefault("integrations", {})["teams_webhook_url"] = url
         self._save_file()
+
+    def get_email_config(self) -> dict:
+        return self._file.get("integrations", {}).get("email", {})
+
+    def save_email_config(self, updates: dict):
+        cfg = self._file.setdefault("integrations", {}).setdefault("email", {})
+        cfg.update(updates)
+        self._save_file()

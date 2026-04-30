@@ -38,6 +38,14 @@
     "baixa"
   ],
   "integrations": {
-    "teams_webhook_url": ""
+    "teams_webhook_url": "",
+    "email": {
+      "smtp_host": "smtp.gmail.com",
+      "smtp_port": 587,
+      "username": "",
+      "password": "",
+      "from_addr": "",
+      "to_addrs": []
+    }
   }
 }
