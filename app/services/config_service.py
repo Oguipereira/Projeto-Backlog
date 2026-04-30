@@ -98,3 +98,14 @@ class ConfigService:
         cfg = self._file.setdefault("integrations", {}).setdefault("email", {})
         cfg.update(updates)
         self._save_file()
+
+    # ------------------------------------------------------------------ #
+    #  Schedule                                                            #
+    # ------------------------------------------------------------------ #
+
+    def get_schedule(self) -> dict:
+        return self._file.get("schedule", {})
+
+    def save_schedule(self, updates: dict):
+        self._file.setdefault("schedule", {}).update(updates)
+        self._save_file()

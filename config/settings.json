@@ -37,6 +37,15 @@
     "media",
     "baixa"
   ],
+  "schedule": {
+    "enabled": false,
+    "frequency": "weekly",
+    "day_of_week": "mon",
+    "hour": 8,
+    "minute": 0,
+    "last_sent": "",
+    "last_status": ""
+  },
   "integrations": {
     "teams_webhook_url": "",
     "email": {

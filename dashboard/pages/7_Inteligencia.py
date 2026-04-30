@@ -19,6 +19,7 @@ from app.services.ml_service import train_all, models_status
 from app.services.report_service import build_report
 from app.services.teams_service import send_to_teams
 from app.services.email_service import send_email
+from app.services import scheduler_service as sched_svc
 from app.utils.calculations import format_duration, calculate_production_loss, format_number
 from dashboard.components.theme import apply_theme, page_header
 
@@ -219,6 +220,95 @@ with st.sidebar:
                 st.success(f"Relatorio enviado para: {', '.join(_to_list)}")
             else:
                 st.error(f"Falha: {result['message']}")
+
+    # ── Agendamento automático ─────────────────────────────────── #
+    st.divider()
+    st.markdown("### Agendamento Automatico")
+
+    _sched_cfg = {}
+    try:
+        db_sch = get_db_session()
+        try:
+            _sched_cfg = ConfigService(db_sch).get_schedule()
+        finally:
+            db_sch.close()
+    except Exception:
+        pass
+
+    _DAYS = {
+        "mon": "Segunda", "tue": "Terca", "wed": "Quarta",
+        "thu": "Quinta",  "fri": "Sexta", "sat": "Sabado", "sun": "Domingo",
+    }
+    _DAYS_KEYS = list(_DAYS.keys())
+
+    freq_opt  = ["Semanal", "Diario"]
+    freq_val  = "Diario" if _sched_cfg.get("frequency") == "daily" else "Semanal"
+    frequency = st.selectbox("Frequencia", freq_opt,
+                             index=freq_opt.index(freq_val), key="sched_freq")
+
+    if frequency == "Semanal":
+        saved_day = _sched_cfg.get("day_of_week", "mon")
+        day_idx   = _DAYS_KEYS.index(saved_day) if saved_day in _DAYS_KEYS else 0
+        day_key   = st.selectbox("Dia da semana", options=_DAYS_KEYS,
+                                 format_func=lambda k: _DAYS[k],
+                                 index=day_idx, key="sched_day")
+    else:
+        day_key = "mon"
+
+    col_h, col_m = st.columns(2)
+    sched_hour = col_h.number_input("Hora", 0, 23,
+                                    value=int(_sched_cfg.get("hour", 8)), key="sched_h")
+    sched_min  = col_m.number_input("Minuto", 0, 59,
+                                    value=int(_sched_cfg.get("minute", 0)),
+                                    step=5, key="sched_m")
+
+    is_on = sched_svc.is_active()
+    col_on, col_off = st.columns(2)
+
+    if col_on.button("Ativar", use_container_width=True, type="primary",
+                     disabled=is_on):
+        if not _email_cfg.get("username") or not _email_cfg.get("password"):
+            st.warning("Configure o Gmail antes de ativar o agendamento.")
+        else:
+            freq_key = "daily" if frequency == "Diario" else "weekly"
+            sched_svc.activate(freq_key, day_key, int(sched_hour), int(sched_min))
+            db_on = get_db_session()
+            try:
+                ConfigService(db_on).save_schedule({
+                    "enabled":     True,
+                    "frequency":   freq_key,
+                    "day_of_week": day_key,
+                    "hour":        int(sched_hour),
+                    "minute":      int(sched_min),
+                })
+            finally:
+                db_on.close()
+            st.success("Agendamento ativado.")
+            st.rerun()
+
+    if col_off.button("Desativar", use_container_width=True, disabled=not is_on):
+        sched_svc.deactivate()
+        db_off = get_db_session()
+        try:
+            ConfigService(db_off).save_schedule({"enabled": False})
+        finally:
+            db_off.close()
+        st.rerun()
+
+    # Status do agendador
+    if is_on:
+        nxt = sched_svc.next_run()
+        nxt_str = nxt.strftime("%d/%m/%Y %H:%M") if nxt else "calculando..."
+        st.success(f"Ativo — proximo envio: {nxt_str}")
+    else:
+        st.info("Agendamento inativo.")
+
+    last_dt, last_st = sched_svc.last_run()
+    if last_dt:
+        icon = "✓" if last_st == "ok" else "✗"
+        st.caption(f"Ultimo envio: {last_dt.strftime('%d/%m %H:%M')} {icon} {last_st}")
+    elif _sched_cfg.get("last_sent"):
+        st.caption(f"Ultimo envio registrado: {_sched_cfg['last_sent']}")
 
 
 st.markdown("---")
