@@ -57,7 +57,7 @@ class ConfigService:
             )
             if rec:
                 rec.value = str(value)
-                rec.updated_at = datetime.utcnow()
+                rec.updated_at = datetime.now()
             else:
                 self.db.add(Configuration(key=full_key, value=str(value), category="production"))
             self._file["production"][key] = value

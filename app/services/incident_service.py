@@ -59,9 +59,9 @@ class IncidentService:
         for key, value in data.items():
             setattr(incident, key, value)
         if data.get("status") == "Resolvido" and not incident.ended_at:
-            incident.ended_at = datetime.utcnow()
+            incident.ended_at = datetime.now()
         self._update_impact(incident)
-        incident.updated_at = datetime.utcnow()
+        incident.updated_at = datetime.now()
         self.db.commit()
         self.db.refresh(incident)
         return incident

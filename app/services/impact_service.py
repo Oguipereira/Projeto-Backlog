@@ -19,7 +19,7 @@ class ImpactService:
     def calculate_incident_impact(self, incident: Incident) -> dict:
         rates = self._cfg.get_production_rates()
         cfg = self._cfg.get_production_config()
-        ended = incident.ended_at or datetime.utcnow()
+        ended = incident.ended_at or datetime.now()
         duration = calculate_duration_minutes(incident.started_at, ended)
         loss = calculate_production_loss(duration, rates["per_minute"])
         effective_minutes = cfg["effective_hours_per_day"] * 60
@@ -57,7 +57,7 @@ class ImpactService:
         sla_violations = 0
 
         for inc in incidents:
-            ended = inc.ended_at or datetime.utcnow()
+            ended = inc.ended_at or datetime.now()
             dur = calculate_duration_minutes(inc.started_at, ended)
             total_minutes += dur
             if inc.status == "Resolvido" and inc.ended_at:

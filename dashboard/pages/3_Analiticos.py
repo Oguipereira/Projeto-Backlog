@@ -45,7 +45,7 @@ def load(start: datetime, end: datetime):
 
         rows = []
         for i in incs:
-            ended = i.ended_at or datetime.utcnow()
+            ended = i.ended_at or datetime.now()
             dur = (ended - i.started_at).total_seconds() / 60
             rows.append({
                 "incident_id":   i.incident_id,

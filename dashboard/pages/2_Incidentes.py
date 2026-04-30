@@ -279,13 +279,13 @@ for inc in incidents:
         ec3, ec4 = st.columns(2)
         end_d = ec3.date_input(
             "Data Fim",
-            value=(inc.ended_at or datetime.utcnow()).date(),
+            value=(inc.ended_at or datetime.now()).date(),
             key=f"eed_{k}",
             disabled=not has_end_edit,
         )
         end_t = ec4.time_input(
             "Hora Fim",
-            value=(inc.ended_at or datetime.utcnow()).time(),
+            value=(inc.ended_at or datetime.now()).time(),
             key=f"eet_{k}",
             disabled=not has_end_edit,
         )

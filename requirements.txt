@@ -1,4 +1,6 @@
 streamlit>=1.42.0
+pytest>=9.0.0
+pytest-cov>=7.0.0
 sqlalchemy>=2.0.0
 pandas>=2.1.0
 plotly>=5.18.0

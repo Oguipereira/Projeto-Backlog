@@ -14,7 +14,7 @@ class ActivityLog(Base):
     user_name  = Column(String(200), default="")
     action     = Column(String(100), nullable=False)
     details    = Column(Text, default="")
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=datetime.now)
 
 
 class Configuration(Base):
@@ -25,7 +25,7 @@ class Configuration(Base):
     value = Column(String(500), nullable=False)
     description = Column(String(300), default="")
     category = Column(String(100), default="general")
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
 
 
 class System(Base):
@@ -36,7 +36,7 @@ class System(Base):
     description = Column(String(300), default="")
     criticality = Column(String(10), default="media")   # alta | media | baixa
     active = Column(Boolean, default=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=datetime.now)
 
     incidents = relationship("Incident", back_populates="system")
 
@@ -79,8 +79,8 @@ class Incident(Base):
     affected_users = Column(Integer, default=0)
 
     created_by = Column(String(100), default="sistema")
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=datetime.now)
+    updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
 
     system = relationship("System", back_populates="incidents")
     incident_type = relationship("IncidentType", back_populates="incidents")

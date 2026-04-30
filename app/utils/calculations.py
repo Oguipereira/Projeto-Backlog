@@ -4,7 +4,7 @@ from typing import Optional
 
 def calculate_duration_minutes(started_at: datetime, ended_at: Optional[datetime] = None) -> float:
     if ended_at is None:
-        ended_at = datetime.utcnow()
+        ended_at = datetime.now()
     delta = ended_at - started_at
     return max(0.0, delta.total_seconds() / 60.0)
 

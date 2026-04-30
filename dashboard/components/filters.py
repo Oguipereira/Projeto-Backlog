@@ -19,7 +19,7 @@ def render_period_filter(key_prefix: str = "filter") -> tuple[datetime, datetime
         period = st.selectbox(
             "Período",
             list(PERIOD_OPTIONS.keys()),
-            index=2,
+            index=5,
             key=f"{key_prefix}_period",
         )
     days = PERIOD_OPTIONS[period]
