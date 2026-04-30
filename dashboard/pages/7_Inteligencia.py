@@ -134,48 +134,85 @@ with st.sidebar:
     finally:
         db_email.close()
 
-    with st.expander("Configurar SMTP", expanded=not _email_cfg.get("username")):
-        e_host = st.text_input("Servidor SMTP", value=_email_cfg.get("smtp_host", "smtp.gmail.com"))
-        e_port = st.number_input("Porta", value=int(_email_cfg.get("smtp_port", 587)), step=1)
-        e_user = st.text_input("Usuário", value=_email_cfg.get("username", ""))
-        e_pass = st.text_input("Senha / App Password", type="password",
-                               value=_email_cfg.get("password", ""))
-        e_from = st.text_input("De (remetente)", value=_email_cfg.get("from_addr", ""))
-        e_to   = st.text_area("Para (um e-mail por linha)",
-                              value="\n".join(_email_cfg.get("to_addrs", [])), height=80)
-        if st.button("Salvar configuracoes SMTP", use_container_width=True):
-            db_sv = get_db_session()
-            try:
-                ConfigService(db_sv).save_email_config({
-                    "smtp_host": e_host,
-                    "smtp_port": int(e_port),
-                    "username":  e_user,
-                    "password":  e_pass,
-                    "from_addr": e_from,
-                    "to_addrs":  [a.strip() for a in e_to.splitlines() if a.strip()],
-                })
-            finally:
-                db_sv.close()
-            st.success("Configuracoes salvas.")
+    _configured = bool(_email_cfg.get("username") and _email_cfg.get("password"))
+
+    with st.expander(
+        "Configuracao Gmail" + (" (salva)" if _configured else " (pendente)"),
+        expanded=not _configured,
+    ):
+        st.caption(
+            "Use seu Gmail pessoal com uma **App Password** de 16 digitos. "
+            "Gere em: Conta Google → Seguranca → Senhas de app."
+        )
+        e_user = st.text_input(
+            "Seu Gmail",
+            value=_email_cfg.get("username", ""),
+            placeholder="seuemail@gmail.com",
+        )
+        e_pass = st.text_input(
+            "App Password (16 digitos, sem espacos)",
+            type="password",
+            value=_email_cfg.get("password", ""),
+            placeholder="abcd efgh ijkl mnop",
+        )
+        st.markdown("**Destinatarios** (maximo 2)")
+        saved_to = _email_cfg.get("to_addrs", [])
+        e_to1 = st.text_input(
+            "Destinatario 1",
+            value=saved_to[0] if len(saved_to) > 0 else "",
+            placeholder="lideranca@empresa.com",
+        )
+        e_to2 = st.text_input(
+            "Destinatario 2 (opcional)",
+            value=saved_to[1] if len(saved_to) > 1 else "",
+            placeholder="gestor@empresa.com",
+        )
+
+        if st.button("Salvar configuracao", use_container_width=True):
+            to_list = [a for a in [e_to1.strip(), e_to2.strip()] if a]
+            if not e_user or not e_pass:
+                st.warning("Preencha o Gmail e a App Password.")
+            elif not to_list:
+                st.warning("Adicione pelo menos um destinatario.")
+            else:
+                db_sv = get_db_session()
+                try:
+                    ConfigService(db_sv).save_email_config({
+                        "smtp_host": "smtp.gmail.com",
+                        "smtp_port": 587,
+                        "username":  e_user.strip(),
+                        "password":  e_pass.strip(),
+                        "from_addr": e_user.strip(),
+                        "to_addrs":  to_list,
+                    })
+                finally:
+                    db_sv.close()
+                st.success("Configuracao salva.")
+
+    _to_list = [a for a in [e_to1.strip(), e_to2.strip()] if a] or _email_cfg.get("to_addrs", [])
 
     if st.button("Enviar relatorio por e-mail", use_container_width=True, type="primary"):
-        cfg = _email_cfg
-        to  = [a.strip() for a in e_to.splitlines() if a.strip()] or cfg.get("to_addrs", [])
-        with st.spinner("Enviando e-mail..."):
-            report = build_report(all_incs, open_incs, prod_rates)
-            result = send_email(
-                smtp_host = e_host or cfg.get("smtp_host", ""),
-                smtp_port = int(e_port or cfg.get("smtp_port", 587)),
-                username  = e_user or cfg.get("username", ""),
-                password  = e_pass or cfg.get("password", ""),
-                from_addr = e_from or cfg.get("from_addr", ""),
-                to_addrs  = to,
-                report    = report,
-            )
-        if result["status"] == "ok":
-            st.success(f"Relatorio enviado para {', '.join(to)}!")
+        if not _configured and not (e_user and e_pass):
+            st.warning("Configure o Gmail antes de enviar.")
+        elif not _to_list:
+            st.warning("Adicione pelo menos um destinatario.")
         else:
-            st.error(f"Falha: {result['message']}")
+            cfg = _email_cfg
+            with st.spinner("Enviando e-mail..."):
+                report = build_report(all_incs, open_incs, prod_rates)
+                result = send_email(
+                    smtp_host = "smtp.gmail.com",
+                    smtp_port = 587,
+                    username  = e_user.strip() or cfg.get("username", ""),
+                    password  = e_pass.strip() or cfg.get("password", ""),
+                    from_addr = e_user.strip() or cfg.get("from_addr", ""),
+                    to_addrs  = _to_list,
+                    report    = report,
+                )
+            if result["status"] == "ok":
+                st.success(f"Relatorio enviado para: {', '.join(_to_list)}")
+            else:
+                st.error(f"Falha: {result['message']}")
 
 
 st.markdown("---")
