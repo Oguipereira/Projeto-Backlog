@@ -16,7 +16,7 @@ from app.services.similarity_service import find_similar
 from app.services.anomaly_service import detect_anomalies, system_trend
 from app.services.sla_predictor import train, predict_risk, is_trained
 from app.services.ml_service import train_all, models_status
-from app.utils.calculations import format_duration
+from app.utils.calculations import format_duration, calculate_production_loss, format_number
 from dashboard.components.theme import apply_theme, page_header
 
 st.set_page_config(
@@ -44,13 +44,14 @@ def load_data():
         all_incs = svc.get_all()
         open_incs = svc.get_all({"status": ["Aberto", "Em Andamento"]})
         resolved  = svc.get_all({"status": ["Resolvido"]})
-        sla_map   = {p: cfg_svc.get_priority_sla(p) for p in ["P1", "P2", "P3", "P4"]}
-        return all_incs, open_incs, resolved, sla_map
+        sla_map    = {p: cfg_svc.get_priority_sla(p) for p in ["P1", "P2", "P3", "P4"]}
+        prod_rates = cfg_svc.get_production_rates()
+        return all_incs, open_incs, resolved, sla_map, prod_rates
     finally:
         db.close()
 
 
-all_incs, open_incs, resolved, sla_map = load_data()
+all_incs, open_incs, resolved, sla_map, prod_rates = load_data()
 
 # ── Sidebar: status e treino dos modelos ─────────────────────── #
 with st.sidebar:
@@ -221,7 +222,81 @@ else:
 
 st.markdown("---")
 
-# ── 3. Busca por Similaridade ─────────────────────────────────── #
+# ── 3. Perda de Produção Estimada ────────────────────────────── #
+st.subheader("Perda de Produção Estimada — Incidentes Abertos")
+st.caption(
+    "Estimativa de perda acumulada desde a abertura, calculada com base "
+    "na taxa de produção configurada. Ordenado do maior impacto para o menor."
+)
+
+if not open_incs:
+    st.success("Nenhum incidente aberto no momento.")
+else:
+    rate_per_min = prod_rates["per_minute"]
+
+    loss_rows = []
+    for inc in open_incs:
+        elapsed = (datetime.now() - inc.started_at).total_seconds() / 60
+        loss    = calculate_production_loss(elapsed, rate_per_min)
+        loss_rows.append({
+            "ID":        inc.incident_id,
+            "Título":    inc.title,
+            "Prior.":    inc.priority,
+            "Sistema":   inc.system.name if inc.system else "-",
+            "Status":    inc.status,
+            "Decorrido": format_duration(elapsed),
+            "Perda":     loss,
+        })
+
+    loss_rows.sort(key=lambda x: x["Perda"], reverse=True)
+    total_loss = sum(r["Perda"] for r in loss_rows)
+    max_loss   = loss_rows[0]["Perda"] if loss_rows else 1
+
+    col_tot, col_avg, col_n = st.columns(3)
+    col_tot.metric("Perda total estimada", f"R$ {format_number(total_loss)}")
+    col_avg.metric("Média por incidente",  f"R$ {format_number(total_loss / len(loss_rows))}")
+    col_n.metric("Incidentes abertos",     len(loss_rows))
+
+    st.markdown("")
+
+    for row in loss_rows:
+        pcolor  = PRIO_COLOR.get(row["Prior."], "#6B7280")
+        bar_pct = max(4, int(row["Perda"] / max_loss * 100)) if max_loss > 0 else 4
+        loss_fmt = f"R$ {format_number(row['Perda'])}"
+
+        title_short = row["Título"][:55] + "…" if len(row["Título"]) > 55 else row["Título"]
+
+        st.markdown(
+            f"""
+            <div style="border:1px solid #E2E8F0;border-radius:10px;
+                padding:12px 16px;margin-bottom:8px">
+                <div style="display:flex;justify-content:space-between;align-items:center">
+                    <div>
+                        <span style="font-weight:700;color:{pcolor}">{row['Prior.']}</span>
+                        &nbsp;
+                        <span style="font-weight:600">{row['ID']}</span>
+                        &nbsp;·&nbsp;
+                        <span style="color:#374151">{title_short}</span>
+                    </div>
+                    <div style="text-align:right;min-width:150px">
+                        <span style="font-size:20px;font-weight:800;color:#DC2626">{loss_fmt}</span>
+                    </div>
+                </div>
+                <div style="font-size:12px;color:#64748B;margin:6px 0 4px">
+                    {row['Sistema']} &nbsp;·&nbsp; {row['Status']} &nbsp;·&nbsp; {row['Decorrido']} em aberto
+                </div>
+                <div style="background:#E5E7EB;border-radius:999px;height:6px">
+                    <div style="width:{bar_pct}%;background:#DC2626;
+                        height:6px;border-radius:999px"></div>
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+st.markdown("---")
+
+# ── 4. Busca por Similaridade ─────────────────────────────────── #
 st.subheader("Busca por Incidentes Similares")
 st.caption("Descreva o incidente atual para encontrar casos parecidos com causa raiz e resolucao.")
 
