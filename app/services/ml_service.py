@@ -57,22 +57,41 @@ def train_all(incidents: list) -> dict:
     return results
 
 
+_MODEL_CACHE: dict = {}
+
+
+def _load_model(fname: str):
+    """Carrega modelo do disco uma vez e mantém em memória."""
+    path = MODELS_DIR / fname
+    if not path.exists():
+        return None
+    cached = _MODEL_CACHE.get(fname)
+    if cached is None or path.stat().st_mtime != _MODEL_CACHE.get(f"{fname}__mtime"):
+        _MODEL_CACHE[fname] = joblib.load(path)
+        _MODEL_CACHE[f"{fname}__mtime"] = path.stat().st_mtime
+    return _MODEL_CACHE[fname]
+
+
 def suggest_classification(title: str, description: str) -> dict:
     """Prevê prioridade, sistema e tipo com base no texto. Retorna dict com confiança."""
     text = f"{title or ''} {description or ''}".strip().lower()
     result = {}
 
     for key, fname in [("priority", "priority.pkl"), ("system", "system.pkl"), ("incident_type", "type.pkl")]:
-        path = MODELS_DIR / fname
-        if not path.exists():
+        pipe = _load_model(fname)
+        if pipe is None:
             continue
-        pipe = joblib.load(path)
-        pred = pipe.predict([text])[0]
+        pred  = pipe.predict([text])[0]
         proba = pipe.predict_proba([text])[0].max()
         result[key] = str(pred)
         result[f"{key}_confidence"] = int(round(proba * 100))
 
     return result
+
+
+def invalidate_cache():
+    """Limpa o cache de modelos — chamar após retreinamento."""
+    _MODEL_CACHE.clear()
 
 
 def models_status() -> dict:
