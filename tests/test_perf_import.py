@@ -15,7 +15,6 @@ from app.services.import_service import analyze_dataframe, commit_import, detect
 
 random.seed(1)
 
-# ── Limites aceitáveis ─────────────────────────────────────────── #
 LIMIT_DETECT_MAP    = 0.010   # s — detecção de colunas
 LIMIT_ANALYZE_100   = 0.300   # s
 LIMIT_ANALYZE_500   = 1.000   # s
@@ -23,7 +22,6 @@ LIMIT_ANALYZE_1000  = 2.000   # s
 LIMIT_READ_CSV_1000 = 0.500   # s
 
 
-# ── Helpers ────────────────────────────────────────────────────── #
 
 SYSTEMS = ["ERP", "CRM", "WMS", "Portal de Vendas", "MES"]
 TYPES   = ["Falha de Rede", "Lentidão", "Falha de Hardware", "Erro de Configuração"]
@@ -83,7 +81,6 @@ class _FakeFile:
         return self._content
 
 
-# ── Fixtures ───────────────────────────────────────────────────── #
 
 @pytest.fixture(scope="module")
 def df_100():  return _make_df(100)
@@ -95,7 +92,6 @@ def df_500():  return _make_df(500)
 def df_1000(): return _make_df(1000)
 
 
-# ── Benchmarks: detect_column_mapping ─────────────────────────── #
 
 def test_detect_map_7_colunas(benchmark):
     cols   = ["título", "início", "sistema", "tipo", "prioridade", "status", "afetados"]
@@ -110,7 +106,6 @@ def test_detect_map_20_colunas(benchmark):
     assert result["title"] == "título"
 
 
-# ── Benchmarks: analyze_dataframe ─────────────────────────────── #
 
 def test_analyze_100(benchmark, df_100):
     valid, errors, _, _ = benchmark(analyze_dataframe, df_100, _col_map(), SYSTEMS, TYPES)
@@ -127,7 +122,6 @@ def test_analyze_1000(benchmark, df_1000):
     assert len(valid) + len(errors) == 1000
 
 
-# ── Benchmarks: read_file (CSV) ───────────────────────────────── #
 
 def test_read_csv_100(benchmark):
     f      = _FakeFile("dados.csv", _make_csv_bytes(100))
@@ -147,7 +141,6 @@ def test_read_csv_1000(benchmark):
     assert e is None and len(df) == 1000
 
 
-# ── Benchmarks: commit_import ─────────────────────────────────── #
 
 def test_commit_import_100(benchmark, populated_db):
     db, system, itype = populated_db["db"], populated_db["system"], populated_db["itype"]
@@ -161,7 +154,6 @@ def test_commit_import_100(benchmark, populated_db):
     assert result["imported"] > 0
 
 
-# ── Limites rígidos ────────────────────────────────────────────── #
 
 def test_detect_map_dentro_do_limite():
     cols = ["título", "início", "sistema", "tipo", "prioridade", "status", "afetados"]
