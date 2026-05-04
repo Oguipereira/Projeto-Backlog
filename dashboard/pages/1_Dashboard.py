@@ -33,7 +33,6 @@ apply_theme()
 page_header("Dashboard Executivo", "Análise de impacto produtivo por período")
 
 
-# ─── helpers ──────────────────────────────────────────────────────── #
 
 @st.cache_data(ttl=120)
 def load_data(start, end, priority, status, system_id, type_id):
@@ -82,7 +81,6 @@ def get_ref():
         db.close()
 
 
-# ─── Filters ──────────────────────────────────────────────────────── #
 systems, types = get_ref()
 sb_filters = render_sidebar_filters(systems, types)
 start, end = render_period_filter("dash")
@@ -102,13 +100,11 @@ if df.empty:
     st.info("Nenhum incidente encontrado para os filtros selecionados.")
     st.stop()
 
-# ─── KPIs ─────────────────────────────────────────────────────────── #
 render_main_kpis(kpis, cfg)
 st.markdown("")
 render_priority_kpis(kpis)
 st.markdown("---")
 
-# ─── Row 1: Loss over time + Priority pie ─────────────────────────── #
 col1, col2 = st.columns([3, 2])
 with col1:
     freq = st.radio("Agrupar por:", ["Semana", "Mês"], horizontal=True, key="r1_freq")
@@ -119,7 +115,6 @@ with col1:
 with col2:
     st.plotly_chart(incidents_by_priority_chart(df), use_container_width=True)
 
-# ─── Row 2: Systems ranking (loss) + Type breakdown ───────────────── #
 col3, col4 = st.columns(2)
 with col3:
     # Default: ranked by production loss
@@ -130,14 +125,12 @@ with col3:
 with col4:
     st.plotly_chart(top_impactful_incidents_chart(df), use_container_width=True)
 
-# ─── Row 3: Type + Status ─────────────────────────────────────────── #
 col5, col6 = st.columns(2)
 with col5:
     st.plotly_chart(incidents_by_type_chart(df), use_container_width=True)
 with col6:
     st.plotly_chart(status_donut_chart(df), use_container_width=True)
 
-# ─── Raw data / export ────────────────────────────────────────────── #
 st.markdown("---")
 with st.expander("Ver dados brutos"):
     export_df = (
